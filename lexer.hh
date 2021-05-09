@@ -1,14 +1,9 @@
 #pragma once
 #include <cctype>
-#include <cstddef>
-#include <istream>
 #include <iterator>
-#include <limits>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <variant>
-#include <array>
 #include <iterator>
 
 namespace lex {
