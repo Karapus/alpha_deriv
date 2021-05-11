@@ -12,6 +12,8 @@ struct Plus {};
 struct Minus {};
 struct Mul {};
 struct Div {};
+struct Lpar {};
+struct Rpar {};
 
 struct Num {
 	int val;
@@ -26,7 +28,7 @@ struct Num {
 };
 
 struct Var {
-	std::string name; //TODO actual value type
+	std::string name;
 	template <typename It>
 	Var(It& it, It end) {
 		do
@@ -35,7 +37,10 @@ struct Var {
 	}
 };
 
-using LexT = std::variant<std::monostate, Plus, Minus, Mul, Div, Num, Var>;
+using LexT = std::variant<std::monostate, Plus, Minus, Mul, Div, Num, Var, Lpar, Rpar>;
+
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 template <typename It>
 class LexemIterator {
@@ -62,6 +67,12 @@ class LexemIterator {
 					break;
 				case '/':
 					lex_ = Div{};
+					break;
+				case '(':
+					lex_ = Lpar{};
+					break;
+				case ')':
+					lex_ = Rpar{};
 					break;
 				default:
 					lex_ = LexT{};

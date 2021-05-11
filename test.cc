@@ -27,7 +27,8 @@ TEST(parser, binop) {
 	std::vector v(lb, le);
 	auto vb = v.begin();
 	auto ast = parser::Parser{vb, v.end()}.parse();
-	ast->print();
+	ast->toLatex();
+	ast->deriv()->toLatex();
 }
 
 TEST(parser, opprec) {
@@ -37,6 +38,18 @@ TEST(parser, opprec) {
 	auto lb = lex::LexemIterator{b, e};
 	auto le = lex::LexemIterator{e};
 	auto ast = parser::Parser{lb, le}.parse();
-	ast->print();
+	ast->toLatex();
+}
+TEST(deriv, plusmul) {
+	std::string_view s = "name + 3*2*1";
+	auto b = s.begin();
+	auto e = s.end();
+	auto lb = lex::LexemIterator{b, e};
+	auto le = lex::LexemIterator{e};
+	auto ast = parser::Parser{lb, le}.parse();
+	ast->toLatex();
+	std::cout << std::endl;
+	ast->deriv()->toLatex();
+	std::cout << ast->deriv()->optimize()->toLatex() << std::endl;
 }
 }
