@@ -1,5 +1,6 @@
 #include "ast.hh"
 #include "lexer.hh"
+#include <memory>
 
 using namespace AST;
 
@@ -67,4 +68,19 @@ Node::ChildT BinOp<lex::Div>::optimize() const {
 template<>
 Node::ChildT UnOp<lex::Plus>::optimize() const {
 	return exp_->optimize();
+}
+
+Node::ChildT Fun::deriv() const {
+		return std::make_unique<BinOp<lex::Mul>>(
+				getDerivFun(),
+				exp_->deriv());
+}
+
+Node::ChildT Fun::getDerivFun() const {
+	if (name_ == "sin")
+		return std::make_unique<Fun>("cos", exp_->clone());
+	if (name_ == "cos")
+		return std::make_unique<UnOp<lex::Minus>>(
+				std::make_unique<Fun>("sin", exp_->clone()));
+	return std::make_unique<Fun>(name_ + "^\\prime", exp_->clone());
 }

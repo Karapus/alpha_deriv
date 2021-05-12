@@ -38,7 +38,7 @@ public:
 		return std::make_unique<UnOp>(exp_->clone());
 	}
 	std::string toLatex() const override {
-		return "(" + std::string{printOp<Op>()} + " " + exp_->toLatex() + ")";
+		return "(" + std::string{printOp<Op>()} + exp_->toLatex() + ")";
 	}
 	ChildT deriv() const override {
 		return std::make_unique<UnOp>(exp_->deriv());
@@ -63,7 +63,7 @@ public:
 		return std::make_unique<BinOp>(lhs_->clone(), rhs_->clone());
 	}
 	std::string toLatex() const override {
-		return "(" + lhs_->toLatex() + " " + printOp<Op>() + rhs_->toLatex() + ")";
+		return "(" + lhs_->toLatex() + printOp<Op>() + rhs_->toLatex() + ")";
 	}
 	ChildT deriv() const override {
 		return std::make_unique<BinOp>(lhs_->deriv(), rhs_->deriv());
@@ -111,4 +111,23 @@ public:
 		return std::make_unique<Var>(name_+"^\\prime");
 	}
 };
+
+class Fun : public Node {
+	std::string name_;
+	ChildT exp_;
+	ChildT getDerivFun() const;
+public:
+	Fun(std::string name, ChildT exp) :
+		name_(std::move(name)),
+		exp_(std::move(exp))
+	{}
+	ChildT clone() const override {
+		return std::make_unique<Fun>(name_, exp_->clone());
+	}
+	std::string toLatex() const override {
+		return name_ + "(" + exp_->toLatex() + ")";
+	}
+	ChildT deriv() const override;
+};
+
 } //namespace AST

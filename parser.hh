@@ -13,9 +13,8 @@ template <template <typename> typename Node,
 	 typename V, typename... Args>
 NodePtr makeOp(V&& variant, NodePtr lhs, Args&&... args) {
 	if (std::holds_alternative<T>(std::forward<V>(variant)))
-		return static_cast<NodePtr>(
-				std::make_unique<Node<T>>(
-					std::move(lhs), args()...));
+		return std::make_unique<Node<T>>(
+				std::move(lhs), args()...);
 	if constexpr (sizeof...(Ts) > 0)
 		return makeOp<Node, Ts...>(std::forward<V>(variant),
 				std::move(lhs),
@@ -58,12 +57,24 @@ private:
 	NodePtr getFact() {
 		auto lex = getLexem();
 		advance();
-		if (std::holds_alternative<lex::Num>(lex)) {
-			return static_cast<NodePtr>(std::make_unique<AST::Num>(std::get<lex::Num>(lex).val));
-		}
+		if (std::holds_alternative<lex::Num>(lex))
+			return std::make_unique<AST::Num>(std::get<lex::Num>(lex).val);
+
 		if (std::holds_alternative<lex::Var>(lex)) {
-			return static_cast<NodePtr>(std::make_unique<AST::Var>(std::get<lex::Var>(lex).name));
+			if (std::holds_alternative<lex::Lpar>(getLexem())) {
+				advance();
+				auto res = std::make_unique<AST::Fun>(
+						std::get<lex::Var>(lex).name,
+						getExpr());
+				if (std::holds_alternative<lex::Rpar>(getLexem())) {
+					advance();
+					return res;
+				} else
+					return nullptr;
+			}
+			return std::make_unique<AST::Var>(std::get<lex::Var>(lex).name);
 		}
+
 		if (std::holds_alternative<lex::Lpar>(lex)) {
 			auto res = getExpr();
 			if (std::holds_alternative<lex::Rpar>(getLexem())) {
@@ -71,6 +82,7 @@ private:
 				return res;
 			}
 		}
+
 		return nullptr;
 	}
 public:
