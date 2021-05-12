@@ -4,6 +4,11 @@
 
 using namespace AST;
 
+void AST::reset(Node::ChildT& old_ptr, Node *new_ptr) {
+	if (old_ptr.get() != new_ptr)
+		old_ptr.reset(new_ptr);
+}
+
 template<>
 char AST::printOp<lex::Plus>() {
 	return '+';
@@ -44,30 +49,34 @@ Node::ChildT BinOp<lex::Div>::deriv() const {
 }
 
 template<>
-Node::ChildT BinOp<lex::Mul>::optimize() const {
+Node* BinOp<lex::Mul>::optimize() {
 	auto lhsval = lhs_->getVal();
 	auto rhsval = rhs_->getVal();
 	if(is<0>(lhsval))
-		return lhs_->optimize();
+		return lhs_.release()->optimize();
 	if(is<0>(rhsval))
-		return rhs_->optimize();
+		return rhs_.release()->optimize();
 	if(is<1>(lhsval))
-		return rhs_->optimize();
+		return rhs_.release()->optimize();
 	if(is<1>(rhsval))
-		return lhs_->optimize();
-	return std::make_unique<BinOp>(lhs_->optimize(), rhs_->optimize());
+		return lhs_.release()->optimize();
+	reset(lhs_, lhs_->optimize());
+	reset(rhs_, rhs_->optimize());
+	return this;
 }
 
 template<>
-Node::ChildT BinOp<lex::Div>::optimize() const {
+Node* BinOp<lex::Div>::optimize() {
 	if(is<0, 1>(lhs_->getVal()))
-		return lhs_->optimize();
-	return std::make_unique<BinOp>(lhs_->optimize(), rhs_->optimize());
+		return lhs_.release()->optimize();
+	reset(lhs_, lhs_->optimize());
+	reset(rhs_, rhs_->optimize());
+	return this;
 }
 
 template<>
-Node::ChildT UnOp<lex::Plus>::optimize() const {
-	return exp_->optimize();
+Node* UnOp<lex::Plus>::optimize() {
+	return exp_.release()->optimize();
 }
 
 Node::ChildT Fun::deriv() const {

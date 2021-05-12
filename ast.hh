@@ -5,11 +5,10 @@
 #include <optional>
 
 namespace AST {
-
 class Node {
 public:
-	virtual ~Node() {}
 	using ChildT = std::unique_ptr<Node>;
+	virtual ~Node() {}
 	virtual ChildT clone() const = 0;
 	virtual std::string toLatex() const = 0;
 	virtual ChildT deriv() const = 0;
@@ -20,10 +19,12 @@ public:
 	static bool is(const std::optional<int> &res) {
 		return res && (([res](auto val){ return res == val; })(vals) || ...);
 	}
-	virtual ChildT optimize() const {
-		return clone();
+	virtual Node* optimize() {
+		return this;
 	}
 };
+
+void reset(Node::ChildT& old_ptr, Node *new_ptr);
 
 template <typename Op>
 char printOp();
@@ -43,10 +44,11 @@ public:
 	ChildT deriv() const override {
 		return std::make_unique<UnOp>(exp_->deriv());
 	}
-	ChildT optimize() const override {
+	Node* optimize() override {
 		if (is<0>(exp_->getVal()))
-			return exp_->optimize();
-		return std::make_unique<UnOp>(exp_->optimize());
+			return exp_.release()->optimize();
+		reset(exp_, exp_->optimize());
+		return this;
 	}
 };
 
@@ -68,12 +70,16 @@ public:
 	ChildT deriv() const override {
 		return std::make_unique<BinOp>(lhs_->deriv(), rhs_->deriv());
 	}
-	ChildT optimize() const override {
-		if (Node::is<0>(lhs_->getVal()))
-			return std::make_unique<UnOp<Op>>(rhs_->optimize());
+	Node* optimize() override {
+		if (Node::is<0>(lhs_->getVal())) {
+			reset(rhs_, rhs_.release()->optimize());
+			return new UnOp<Op>(std::move(rhs_));
+		}
 		if (Node::is<0>(rhs_->getVal()))
-			return lhs_->optimize();
-		return std::make_unique<BinOp>(lhs_->optimize(), rhs_->optimize());
+			return lhs_.release()->optimize();
+		reset(lhs_, lhs_->optimize());
+		reset(rhs_, rhs_->optimize());
+		return this;
 	}
 };
 
@@ -130,4 +136,20 @@ public:
 	ChildT deriv() const override;
 };
 
+class Tree {
+	Node::ChildT root_;
+public:
+	Tree(Node::ChildT root) : root_(std::move(root))
+	{}
+	Tree& optimize() {
+		reset(root_, root_->optimize());
+		return *this;
+	}
+	Tree deriv() const {
+		return Tree(root_->deriv());
+	}
+	std::string toLatex() const {
+		return root_->toLatex();
+	}
+};
 } //namespace AST
